@@ -138,6 +138,47 @@ const getMe = asyncHandler(async (req, res) => {
   res.json({ success: true, user: sanitizeUser(req.user) });
 });
 
+// @desc    Simple login/signup - no OTP, no verification. Creates the user on
+//          first login, logs them in on every subsequent one. Temporary until
+//          a domain is set up for the OTP/email flow above (send-otp/verify-otp
+//          remain fully intact and unused - re-enable them from the frontend
+//          whenever you're ready, no backend changes needed).
+// @route   POST /api/auth/login
+// @access  Public
+// body: { name, email, phone }  -- name required only when the account is new
+const simpleLogin = asyncHandler(async (req, res) => {
+  const { name, email, phone } = req.body;
+
+  if (!email && !phone) {
+    return res.status(400).json({ success: false, message: 'email or phone is required' });
+  }
+
+  const orConditions = [];
+  if (email) orConditions.push({ email: email.toLowerCase() });
+  if (phone) orConditions.push({ phone });
+
+  let user = await User.findOne({ $or: orConditions });
+
+  if (!user) {
+    if (!name || !email || !phone) {
+      return res.status(400).json({
+        success: false,
+        message: 'name, email, and phone are all required to create a new account',
+      });
+    }
+    user = await User.create({
+      name,
+      email: email.toLowerCase(),
+      phone,
+      isEmailVerified: false,
+      isPhoneVerified: false,
+    });
+  }
+
+  const token = generateToken(user._id, user.role);
+  res.json({ success: true, token, user: sanitizeUser(user) });
+});
+
 function sanitizeUser(user) {
   return {
     id: user._id,
@@ -150,4 +191,4 @@ function sanitizeUser(user) {
   };
 }
 
-module.exports = { sendOtp, verifyOtp, getMe };
+module.exports = { sendOtp, verifyOtp, getMe, simpleLogin };
