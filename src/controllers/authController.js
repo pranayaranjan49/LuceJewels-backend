@@ -46,7 +46,7 @@ const sendOtp = asyncHandler(async (req, res) => {
     to: email,
     subject: 'Your Jewelva verification code',
     html: `<div style="font-family:sans-serif">
-            <h1>Welcome to Luce Jewels. Explore the Home Fashion and Jeweleries</h1>
+            <h1>Welcome to Luxe Jewels. Explore the Home Fashion and Jeweleries</h1>
              <h2>Your verification code</h2>
              <p style="font-size:28px;letter-spacing:4px;font-weight:bold">${code}</p>
              <p>This code expires in 10 minutes. Huryy up</p>
