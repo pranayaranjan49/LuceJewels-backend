@@ -21,8 +21,8 @@ Fill in `.env`:
 | `MONGO_URI` | MongoDB Atlas → Database → Connect → Drivers |
 | `JWT_SECRET` | any long random string (`openssl rand -hex 32`) |
 | `SMTP_USER` / `SMTP_PASS` | Gmail → enable 2FA → create an **App Password** |
-| `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` | Twilio Console dashboard |
-| `TWILIO_VERIFY_SERVICE_SID` | Twilio Console → Verify → Services → create a service |
+| `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` | **Optional.** Twilio Console dashboard. Leave blank to disable phone login — email login and everything else still works |
+| `TWILIO_VERIFY_SERVICE_SID` | **Optional.** Twilio Console → Verify → Services → create a service |
 | `CLOUDINARY_*` | Cloudinary dashboard home page |
 
 Run it:
@@ -32,6 +32,16 @@ npm run seed        # creates admin user + 6 categories + 6 sample products
 ```
 
 Server starts at `http://localhost:5000`. Health check: `GET /api/health`.
+
+> **Note on Twilio:** it's fully optional. `src/utils/sendSms.js` only initializes
+> the Twilio client the moment a phone-OTP or SMS-campaign request is made — not
+> at server startup — so missing/blank Twilio env vars will never crash the app.
+> A user hitting phone login without it configured gets a clean `503` error
+> ("Phone/SMS is not configured on this server. Use email login instead."), and
+> SMS campaign sends are skipped without failing the whole broadcast. Note that
+> registration (even via email) still collects a phone number on the User model —
+> that's just stored as contact info for shipping, it is never SMS-verified
+> unless you use the phone-OTP flow.
 
 > **Note on transactions:** `createOrder` uses a MongoDB session/transaction, which
 > requires a replica set. Atlas clusters (even the free M0) are replica sets by

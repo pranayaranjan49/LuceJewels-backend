@@ -11,13 +11,13 @@ const run = async () => {
   await connectDB();
 
   // --- Admin user ---
-  const adminEmail = process.env.ADMIN_EMAIL || 'admin@jewelva.com';
+  const adminEmail = process.env.ADMIN_EMAIL || 'admin@royaljewels.com';
   let admin = await User.findOne({ email: adminEmail });
   if (!admin) {
     admin = await User.create({
       name: 'Admin',
       email: adminEmail,
-      phone: '+918260675755',
+      phone: '+910000000000',
       role: 'admin',
       isEmailVerified: true,
       isPhoneVerified: true,

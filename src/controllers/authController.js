@@ -44,12 +44,11 @@ const sendOtp = asyncHandler(async (req, res) => {
 
   await sendEmail({
     to: email,
-    subject: 'Your Jewelva verification code',
+    subject: 'Your Royal Jewels verification code',
     html: `<div style="font-family:sans-serif">
-            <h1>Welcome to Luxe Jewels. Explore the Home Fashion and Jeweleries</h1>
              <h2>Your verification code</h2>
              <p style="font-size:28px;letter-spacing:4px;font-weight:bold">${code}</p>
-             <p>This code expires in 10 minutes. Huryy up</p>
+             <p>This code expires in 10 minutes.</p>
            </div>`,
   });
 
@@ -139,31 +138,26 @@ const getMe = asyncHandler(async (req, res) => {
 });
 
 // @desc    Simple login/signup - no OTP, no verification. Creates the user on
-//          first login, logs them in on every subsequent one. Temporary until
-//          a domain is set up for the OTP/email flow above (send-otp/verify-otp
-//          remain fully intact and unused - re-enable them from the frontend
-//          whenever you're ready, no backend changes needed).
+//          first login, logs them in on every subsequent one. All the OTP
+//          code above (sendOtp/verifyOtp) is left fully intact and untouched -
+//          just re-wire the frontend back to it whenever email/SMS is ready.
 // @route   POST /api/auth/login
 // @access  Public
 // body: { name, email, phone }  -- name required only when the account is new
 const simpleLogin = asyncHandler(async (req, res) => {
   const { name, email, phone } = req.body;
 
-  if (!email && !phone) {
-    return res.status(400).json({ success: false, message: 'email or phone is required' });
+  if (!email || !phone) {
+    return res.status(400).json({ success: false, message: 'email and phone are required' });
   }
 
-  const orConditions = [];
-  if (email) orConditions.push({ email: email.toLowerCase() });
-  if (phone) orConditions.push({ phone });
-
-  let user = await User.findOne({ $or: orConditions });
+  let user = await User.findOne({ $or: [{ email: email.toLowerCase() }, { phone }] });
 
   if (!user) {
-    if (!name || !email || !phone) {
+    if (!name) {
       return res.status(400).json({
         success: false,
-        message: 'name, email, and phone are all required to create a new account',
+        message: 'name is required to create a new account',
       });
     }
     user = await User.create({

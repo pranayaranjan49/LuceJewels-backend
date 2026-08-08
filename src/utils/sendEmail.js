@@ -1,67 +1,24 @@
-// const nodemailer = require('nodemailer');
-
-// const transporter = nodemailer.createTransport({
-//   host: process.env.SMTP_HOST,
-//   port: Number(process.env.SMTP_PORT),
-//   secure: Number(process.env.SMTP_PORT) === 465,
-//   auth: {
-//     user: process.env.SMTP_USER,
-//     pass: process.env.SMTP_PASS,
-//   },
-// });
-
-// /**
-//  * sendEmail({ to, subject, html })
-//  * to: string | string[]  (string[] used for bulk campaign sends)
-//  */
-// const sendEmail = async ({ to, subject, html }) => {
-//   const info = await transporter.sendMail({
-//     from: process.env.SMTP_FROM,
-//     to,
-//     subject,
-//     html,
-//   });
-//   return info;
-// };
-
-// // Sends the same email to many recipients in batches (avoids provider throttling/spam flags)
-// const sendBulkEmail = async ({ recipients, subject, html, batchSize = 40 }) => {
-//   const results = { sent: 0, failed: 0 };
-//   for (let i = 0; i < recipients.length; i += batchSize) {
-//     const batch = recipients.slice(i, i + batchSize);
-//     try {
-//       await transporter.sendMail({
-//         from: process.env.SMTP_FROM,
-//         bcc: batch, // bcc keeps recipient list private
-//         subject,
-//         html,
-//       });
-//       results.sent += batch.length;
-//     } catch (err) {
-//       console.error('Bulk email batch failed:', err.message);
-//       results.failed += batch.length;
-//     }
-//   }
-//   return results;
-// };
-
-// module.exports = { sendEmail, sendBulkEmail };
-
-
-
 // Sends email via Resend's HTTPS API instead of raw SMTP sockets.
 // This matters because Railway (and most cloud hosts) block outbound SMTP
-// ports (465/587) by default - HTTPS on port 443 is never blocked, since
-// it's the same kind of request your app already makes to MongoDB Atlas
-// and Cloudinary successfully.
+// ports (465/587) by default, regardless of domain ownership - HTTPS on
+// port 443 is never blocked, since it's the same kind of request your app
+// already makes successfully to MongoDB Atlas and Cloudinary.
+//
+// Now that you own luxejewels.dpdns.org and have verified it in Resend,
+// RESEND_FROM_EMAIL should be an address on that domain (e.g.
+// hello@luxejewels.dpdns.org) - this removes the "can only send to your
+// own inbox" restriction that onboarding@resend.dev has.
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
-// onboarding@resend.dev works immediately with zero domain setup and can
-// send to any recipient - perfect for launch day. Once you own a domain
-// you can verify it in Resend and switch this to your own address.
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'Luxe Jewels <onboarding@resend.dev>';
 
 const sendViaResend = async ({ to, subject, html }) => {
+  if (!RESEND_API_KEY) {
+    const err = new Error('Email is not configured on this server (missing RESEND_API_KEY).');
+    err.statusCode = 503;
+    throw err;
+  }
+
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
@@ -86,12 +43,14 @@ const sendEmail = async ({ to, subject, html }) => {
 };
 
 // Sends the same email to many recipients in batches (campaign broadcasts).
-// Resend's `to` field accepts an array directly, so no bcc trick needed -
-// but we still batch to stay well under rate limits on the free tier.
+// Resend's `to` field accepts an array directly - batching just keeps each
+// request comfortably under rate limits on the free tier.
 const sendBulkEmail = async ({ recipients, subject, html, batchSize = 40 }) => {
   const results = { sent: 0, failed: 0 };
-  for (let i = 0; i < recipients.length; i += batchSize) {
-    const batch = recipients.slice(i, i + batchSize);
+  const unique = [...new Set(recipients.filter(Boolean))];
+
+  for (let i = 0; i < unique.length; i += batchSize) {
+    const batch = unique.slice(i, i + batchSize);
     try {
       await sendViaResend({ to: batch, subject, html });
       results.sent += batch.length;
