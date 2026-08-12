@@ -19,6 +19,7 @@ const userRoutes = require('./src/routes/userRoutes');
 const campaignRoutes = require('./src/routes/campaignRoutes');
 const subscriberRoutes = require('./src/routes/subscriberRoutes');
 const bannerRoutes = require('./src/routes/bannerRoutes');
+const profileRoutes = require('./src/routes/profileRoutes');
 
 connectDB();
 
@@ -60,6 +61,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/campaigns', campaignRoutes);
 app.use('/api/subscribers', subscriberRoutes);
 app.use('/api/banners', bannerRoutes);
+app.use('/api/profile', profileRoutes);
 
 // --- Error handling ---
 app.use(notFound);
