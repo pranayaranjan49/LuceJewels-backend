@@ -3,14 +3,16 @@ const Order = require('../models/Order');
 const asyncHandler = require('../utils/asyncHandler');
 
 // @desc    Get all registered users (admin - for user management panel)
-// @route   GET /api/users?search=&page=&limit=
+// @route   GET /api/users?search=&role=&page=&limit=
 // @access  Admin
 const getUsers = asyncHandler(async (req, res) => {
-  const { search, page = 1, limit = 20 } = req.query;
+  const { search, role, page = 1, limit = 20 } = req.query;
 
-  const filter = search
-    ? { $or: [{ name: new RegExp(search, 'i') }, { email: new RegExp(search, 'i') }, { phone: new RegExp(search, 'i') }] }
-    : {};
+  const filter = {};
+  if (search) {
+    filter.$or = [{ name: new RegExp(search, 'i') }, { email: new RegExp(search, 'i') }, { phone: new RegExp(search, 'i') }];
+  }
+  if (role) filter.role = role;
 
   const users = await User.find(filter)
     .select('-__v')
@@ -33,4 +35,39 @@ const getUser = asyncHandler(async (req, res) => {
   res.json({ success: true, data: { user, orders } });
 });
 
-module.exports = { getUsers, getUser };
+// @desc    Create a new admin account directly (or promote an existing
+//          matching user to admin). Bypasses OTP entirely - an admin
+//          creating another admin is an explicit, already-authenticated
+//          action, so the new account is marked verified immediately.
+// @route   POST /api/users/admins
+// @access  Admin
+const createOrPromoteAdmin = asyncHandler(async (req, res) => {
+  const { name, email, phone } = req.body;
+  if (!name || !email || !phone) {
+    return res.status(400).json({ success: false, message: 'name, email, and phone are all required' });
+  }
+
+  let user = await User.findOne({ $or: [{ email: email.toLowerCase() }, { phone }] });
+
+  if (user) {
+    if (user.role === 'admin') {
+      return res.status(400).json({ success: false, message: 'This person is already an admin' });
+    }
+    user.role = 'admin';
+    await user.save();
+    return res.status(200).json({ success: true, message: 'Existing user promoted to admin', data: user });
+  }
+
+  user = await User.create({
+    name,
+    email: email.toLowerCase(),
+    phone,
+    role: 'admin',
+    isEmailVerified: true,
+    isPhoneVerified: true,
+  });
+
+  res.status(201).json({ success: true, message: 'New admin created', data: user });
+});
+
+module.exports = { getUsers, getUser, createOrPromoteAdmin };
