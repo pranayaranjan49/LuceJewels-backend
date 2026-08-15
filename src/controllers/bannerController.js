@@ -26,16 +26,26 @@ const createBanner = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: 'An image is required' });
   }
 
-  const { title, subtitle, ctaLabel, ctaLink, order } = req.body;
+  // const { title, subtitle, ctaLabel, ctaLink, order } = req.body;
+  // const banner = await Banner.create({
+  //   title,
+  //   subtitle,
+  //   ctaLabel,
+  //   ctaLink,
+  //   order: order !== undefined ? Number(order) : 0,
+  //   image: { url: req.file.path, publicId: req.file.filename },
+  // });
+  const { title, subtitle, ctaLabel, ctaLink, textColor, order } = req.body;
   const banner = await Banner.create({
     title,
     subtitle,
     ctaLabel,
     ctaLink,
+    textColor,
     order: order !== undefined ? Number(order) : 0,
     image: { url: req.file.path, publicId: req.file.filename },
   });
-
+  
   res.status(201).json({ success: true, data: banner });
 });
 
